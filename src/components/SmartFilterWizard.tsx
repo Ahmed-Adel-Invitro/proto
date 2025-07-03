@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { FilterCriteria } from '../types';
+import { FilterCriteria, ColumnConfig } from '../types';
 import { filterOptions, getIndustrySpecificOptions } from '../data/mockData';
-import { Search, MapPin, Building2, Target, Sparkles, X, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Building2, MapPin, Database, Users } from 'lucide-react';
 
 interface SmartFilterWizardProps {
   filters: FilterCriteria;
   onFiltersChange: (filters: FilterCriteria) => void;
-  onNext: () => void;
-  canProceed: boolean;
+  columns: ColumnConfig[];
+  onColumnsChange: (columns: ColumnConfig[]) => void;
+  currentStep: number;
 }
 
 export const SmartFilterWizard: React.FC<SmartFilterWizardProps> = ({
   filters,
   onFiltersChange,
-  onNext,
-  canProceed
+  columns,
+  onColumnsChange,
+  currentStep
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'industry' | 'location'>('industry');
+  const [expandedSections, setExpandedSections] = useState({
+    icp: true,
+    industry: currentStep >= 1,
+    contacts: currentStep >= 2
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const handleIndustryToggle = (industry: string) => {
     const newIndustries = filters.industry.includes(industry)
@@ -35,236 +47,208 @@ export const SmartFilterWizard: React.FC<SmartFilterWizardProps> = ({
     onFiltersChange({ ...filters, cities: newCities });
   };
 
-  const filteredIndustries = filterOptions.industries.filter(industry =>
-    industry.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleIndustrySpecificChange = (item: string) => {
+    const newItems = filters.industrySpecific.includes(item)
+      ? filters.industrySpecific.filter(i => i !== item)
+      : [...filters.industrySpecific, item];
+    
+    onFiltersChange({ ...filters, industrySpecific: newItems });
+  };
 
-  const filteredCities = filterOptions.cities.filter(city =>
-    city.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleContactChange = (contact: string) => {
+    const newContacts = filters.contacts.includes(contact)
+      ? filters.contacts.filter(c => c !== contact)
+      : [...filters.contacts, contact];
+    
+    onFiltersChange({ ...filters, contacts: newContacts });
+  };
 
-  const quickPresets = [
-    {
-      name: 'Healthcare Tech',
-      industries: ['Health Care'],
-      cities: ['San Francisco', 'Boston', 'New York'],
-      icon: '🏥'
-    },
-    {
-      name: 'Fintech Startups',
-      industries: ['Financial Technology'],
-      cities: ['San Francisco', 'New York', 'London'],
-      icon: '💰'
-    },
-    {
-      name: 'SaaS Companies',
-      industries: ['Software Development'],
-      cities: ['San Francisco', 'Seattle', 'Austin'],
-      icon: '💻'
-    }
-  ];
-
-  const applyPreset = (preset: typeof quickPresets[0]) => {
-    onFiltersChange({
-      ...filters,
-      industry: preset.industries,
-      cities: preset.cities
-    });
+  const getAvailableIndustryOptions = () => {
+    if (filters.industry.length === 0) return [];
+    const allOptions = filters.industry.flatMap(industry => 
+      getIndustrySpecificOptions(industry)
+    );
+    return [...new Set(allOptions)];
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl mb-4">
-          <Target className="h-8 w-8 text-white" />
-        </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Define Your Ideal Customer</h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Start by selecting the industries and locations that match your target market. 
-          Our AI will help you discover the most relevant companies.
-        </p>
+    <div className="space-y-6">
+      {/* ICP Section */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        <button
+          onClick={() => toggleSection('icp')}
+          className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50"
+        >
+          <div className="flex items-center">
+            <Building2 className="h-5 w-5 text-blue-600 mr-3" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">ICP Definition</h3>
+              <p className="text-sm text-gray-500">Industry & Location</p>
+            </div>
+          </div>
+          {expandedSections.icp ? (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {expandedSections.icp && (
+          <div className="px-6 pb-6 space-y-6">
+            {/* Industries */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Industries</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {filterOptions.industries.map((industry) => (
+                  <label
+                    key={industry}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.industry.includes(industry)}
+                      onChange={() => handleIndustryToggle(industry)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-3"
+                    />
+                    <span className="text-sm text-gray-700">{industry}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Cities */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Cities</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {filterOptions.cities.map((city) => (
+                  <label
+                    key={city}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.cities.includes(city)}
+                      onChange={() => handleCityToggle(city)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-3"
+                    />
+                    <span className="text-sm text-gray-700">{city}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Location Range */}
+            {filters.cities.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Search Radius</h4>
+                <div className="grid grid-cols-1 gap-2">
+                  {filterOptions.locationRanges.map((range) => (
+                    <label
+                      key={range}
+                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="locationRange"
+                        checked={filters.locationRange === range}
+                        onChange={() => onFiltersChange({ ...filters, locationRange: range })}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 mr-3"
+                      />
+                      <span className="text-sm text-gray-700">{range}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Quick Presets */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center mb-4">
-          <Sparkles className="h-5 w-5 text-yellow-500 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-900">Quick Start Templates</h3>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {quickPresets.map((preset) => (
-            <button
-              key={preset.name}
-              onClick={() => applyPreset(preset)}
-              className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group"
-            >
-              <div className="text-2xl mb-2">{preset.icon}</div>
-              <div className="text-sm font-medium text-gray-900 group-hover:text-blue-700">
-                {preset.name}
+      {/* Industry Specific Section */}
+      {currentStep >= 1 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <button
+            onClick={() => toggleSection('industry')}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50"
+          >
+            <div className="flex items-center">
+              <Database className="h-5 w-5 text-green-600 mr-3" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Industry Specific</h3>
+                <p className="text-sm text-gray-500">Specialized data fields</p>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {preset.industries.join(', ')}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+            </div>
+            {expandedSections.industry ? (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
 
-      {/* Main Filter Interface */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-100">
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab('industry')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'industry'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Building2 className="h-4 w-4 inline mr-2" />
-              Industries ({filters.industry.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('location')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'location'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <MapPin className="h-4 w-4 inline mr-2" />
-              Locations ({filters.cities.length})
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab === 'industry' ? 'industries' : 'cities'}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Selected Items */}
-          {((activeTab === 'industry' && filters.industry.length > 0) || 
-            (activeTab === 'location' && filters.cities.length > 0)) && (
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Selected:</h4>
-              <div className="flex flex-wrap gap-2">
-                {activeTab === 'industry' 
-                  ? filters.industry.map((industry) => (
-                      <span
-                        key={industry}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-                      >
-                        {industry}
-                        <button
-                          onClick={() => handleIndustryToggle(industry)}
-                          className="ml-2 hover:text-blue-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))
-                  : filters.cities.map((city) => (
-                      <span
-                        key={city}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800"
-                      >
-                        {city}
-                        <button
-                          onClick={() => handleCityToggle(city)}
-                          className="ml-2 hover:text-green-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))
-                }
+          {expandedSections.industry && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 gap-2">
+                {getAvailableIndustryOptions().map((option) => (
+                  <label
+                    key={option}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.industrySpecific.includes(option)}
+                      onChange={() => handleIndustrySpecificChange(option)}
+                      className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500 mr-3"
+                    />
+                    <span className="text-sm text-gray-700">{option}</span>
+                  </label>
+                ))}
               </div>
             </div>
           )}
-
-          {/* Options Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {activeTab === 'industry' 
-              ? filteredIndustries.map((industry) => (
-                  <button
-                    key={industry}
-                    onClick={() => handleIndustryToggle(industry)}
-                    className={`p-4 text-left border rounded-xl transition-all ${
-                      filters.industry.includes(industry)
-                        ? 'border-blue-300 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{industry}</span>
-                      {filters.industry.includes(industry) ? (
-                        <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full" />
-                        </div>
-                      ) : (
-                        <Plus className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </button>
-                ))
-              : filteredCities.map((city) => (
-                  <button
-                    key={city}
-                    onClick={() => handleCityToggle(city)}
-                    className={`p-4 text-left border rounded-xl transition-all ${
-                      filters.cities.includes(city)
-                        ? 'border-green-300 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{city}</span>
-                      {filters.cities.includes(city) ? (
-                        <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full" />
-                        </div>
-                      ) : (
-                        <Plus className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </button>
-                ))
-            }
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* Location Range */}
-      {activeTab === 'location' && filters.cities.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Search Radius</h3>
-          <div className="grid grid-cols-5 gap-3">
-            {filterOptions.locationRanges.map((range) => (
-              <button
-                key={range}
-                onClick={() => onFiltersChange({ ...filters, locationRange: range })}
-                className={`p-3 text-center border rounded-lg transition-all ${
-                  filters.locationRange === range
-                    ? 'border-blue-300 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="text-sm font-medium">{range}</div>
-              </button>
-            ))}
-          </div>
+      {/* Contacts Section */}
+      {currentStep >= 2 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <button
+            onClick={() => toggleSection('contacts')}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50"
+          >
+            <div className="flex items-center">
+              <Users className="h-5 w-5 text-purple-600 mr-3" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                <p className="text-sm text-gray-500">Department contacts</p>
+              </div>
+            </div>
+            {expandedSections.contacts ? (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+
+          {expandedSections.contacts && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 gap-2">
+                {filterOptions.contactFunctions.map((contact) => (
+                  <label
+                    key={contact}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.contacts.includes(contact)}
+                      onChange={() => handleContactChange(contact)}
+                      className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 mr-3"
+                    />
+                    <span className="text-sm text-gray-700">{contact}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -4,8 +4,6 @@ import { mockCompanies, availableColumns } from './data/mockData';
 import { SmartFilterWizard } from './components/SmartFilterWizard';
 import { IntelligentResultsView } from './components/IntelligentResultsView';
 import { FloatingActionPanel } from './components/FloatingActionPanel';
-import { ProgressIndicator } from './components/ProgressIndicator';
-import { InsightsSidebar } from './components/InsightsSidebar';
 import { SaveModal } from './components/SaveModal';
 
 function App() {
@@ -22,19 +20,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalType, setSaveModalType] = useState<'list' | 'filter'>('list');
-  const [insights, setInsights] = useState({
-    totalCompanies: 0,
-    topIndustries: [] as string[],
-    averageCompanySize: '',
-    geographicSpread: 0
-  });
-
-  const steps = [
-    { id: 'target', title: 'Define Target', description: 'Who are you looking for?' },
-    { id: 'discover', title: 'Discover Data', description: 'What data matters most?' },
-    { id: 'refine', title: 'Refine Results', description: 'Perfect your selection' },
-    { id: 'export', title: 'Export & Save', description: 'Get your data ready' }
-  ];
 
   const simulateDataFetch = async () => {
     setIsLoading(true);
@@ -55,16 +40,6 @@ function App() {
     }
     
     setData(filteredData);
-    
-    // Generate insights
-    const industries = [...new Set(filteredData.map(c => c.industry))];
-    setInsights({
-      totalCompanies: filteredData.length,
-      topIndustries: industries.slice(0, 3),
-      averageCompanySize: '150-300 employees',
-      geographicSpread: [...new Set(filteredData.map(c => c.city))].length
-    });
-    
     setIsLoading(false);
   };
 
@@ -118,7 +93,7 @@ function App() {
     if (currentStep === 0 && canProceedToNextStep()) {
       simulateDataFetch();
     }
-    if (currentStep < steps.length - 1) {
+    if (currentStep < 2) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -134,60 +109,36 @@ function App() {
   }, [filters.industrySpecific, filters.contacts]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Smart CRM Discovery</h1>
-              <p className="text-sm text-gray-600 mt-1">AI-powered company research and data collection</p>
-            </div>
-            <ProgressIndicator 
-              steps={steps} 
-              currentStep={currentStep} 
-              onStepClick={setCurrentStep}
-            />
-          </div>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <h1 className="text-3xl font-bold text-gray-900">Company Discovery</h1>
+          <p className="text-gray-600 mt-2">Find and filter companies that match your criteria</p>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-12 gap-8">
-          {/* Main Content Area */}
-          <div className="col-span-8">
-            {currentStep === 0 && (
-              <SmartFilterWizard
-                filters={filters}
-                onFiltersChange={setFilters}
-                onNext={handleNextStep}
-                canProceed={canProceedToNextStep()}
-              />
-            )}
-            
-            {currentStep >= 1 && (
-              <IntelligentResultsView
-                data={data}
-                columns={columns}
-                onColumnsChange={setColumns}
-                filters={filters}
-                onFiltersChange={setFilters}
-                isLoading={isLoading}
-                currentStep={currentStep}
-                insights={insights}
-              />
-            )}
+          {/* Filters Sidebar */}
+          <div className="col-span-4">
+            <SmartFilterWizard
+              filters={filters}
+              onFiltersChange={setFilters}
+              columns={columns}
+              onColumnsChange={setColumns}
+              currentStep={currentStep}
+            />
           </div>
 
-          {/* Insights Sidebar */}
-          <div className="col-span-4">
-            <InsightsSidebar
-              insights={insights}
-              filters={filters}
-              dataCount={data.length}
-              currentStep={currentStep}
+          {/* Results Area */}
+          <div className="col-span-8">
+            <IntelligentResultsView
+              data={data}
+              columns={columns}
               isLoading={isLoading}
+              currentStep={currentStep}
             />
           </div>
         </div>
