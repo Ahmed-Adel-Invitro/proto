@@ -23,10 +23,17 @@ function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalType, setSaveModalType] = useState<'list' | 'filter'>('list');
   const [hasPreviewedOnce, setHasPreviewedOnce] = useState(false);
+  const [hasQueriedInMultiStage, setHasQueriedInMultiStage] = useState(false);
 
   const simulateDataFetch = async () => {
     setIsLoading(true);
     setHasPreviewedOnce(true);
+    
+    // For multi-stage flow, mark that we've queried
+    if (currentFlow === 'three-stage') {
+      setHasQueriedInMultiStage(true);
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     let filteredData = mockCompanies.slice(0, 10); // Always show exactly 10 records
@@ -123,6 +130,17 @@ function App() {
     setColumns(availableColumns);
     setPreviewData([]);
     setHasPreviewedOnce(false);
+    setHasQueriedInMultiStage(false);
+  };
+
+  const handleStageChange = (newStage: StageType) => {
+    // If moving from ICP stage to industry-columns and we have data, auto-query
+    if (currentStage === 'icp' && newStage === 'industry-columns' && canProceed() && !hasQueriedInMultiStage) {
+      setCurrentStage(newStage);
+      simulateDataFetch();
+    } else {
+      setCurrentStage(newStage);
+    }
   };
 
   useEffect(() => {
@@ -133,14 +151,24 @@ function App() {
     updateColumnsBasedOnFilters();
   }, [filters.industrySpecific, filters.contacts]);
 
-  // Only auto-fetch for three-stage flow
-  useEffect(() => {
-    if (currentFlow === 'three-stage') {
-      if (currentStage === 'contact-columns' && canProceed()) {
-        simulateDataFetch();
-      }
+  // Show data in multi-stage flow once we have it
+  const shouldShowData = () => {
+    if (currentFlow === 'single') {
+      return hasPreviewedOnce;
+    } else {
+      // For three-stage flow, show data from industry-columns stage onwards if we've queried
+      return hasQueriedInMultiStage && (currentStage === 'industry-columns' || currentStage === 'contact-columns');
     }
-  }, [filters, currentFlow, currentStage]);
+  };
+
+  const shouldShowEmptyState = () => {
+    if (currentFlow === 'single') {
+      return !hasPreviewedOnce;
+    } else {
+      // For three-stage flow, show empty state only on ICP stage or if we haven't queried yet
+      return currentStage === 'icp' || !hasQueriedInMultiStage;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -149,7 +177,7 @@ function App() {
       {currentFlow === 'three-stage' && (
         <StageNavigation
           currentStage={currentStage}
-          onStageChange={setCurrentStage}
+          onStageChange={handleStageChange}
           canProceed={canProceed()}
         />
       )}
@@ -162,23 +190,26 @@ function App() {
       />
       
       <ResultsPanel
-        data={previewData}
+        data={shouldShowData() ? previewData : []}
         columns={columns}
         isLoading={isLoading}
         onSaveList={handleSaveList}
         onSaveFilterGroup={handleSaveFilterGroup}
-        showEmptyState={currentFlow === 'single' && !hasPreviewedOnce}
+        showEmptyState={shouldShowEmptyState()}
       />
 
-      <div className="fixed bottom-6 left-6">
-        <button
-          onClick={() => simulateDataFetch()}
-          disabled={isLoading || (currentFlow === 'single' && !canProceed())}
-          className="w-80 bg-black text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          {isLoading ? 'Loading...' : 'Preview Companies'}
-        </button>
-      </div>
+      {/* Preview button - only show for single flow or ICP stage in multi-stage */}
+      {(currentFlow === 'single' || (currentFlow === 'three-stage' && currentStage === 'icp')) && (
+        <div className="fixed bottom-6 left-6">
+          <button
+            onClick={() => simulateDataFetch()}
+            disabled={isLoading || !canProceed()}
+            className="w-80 bg-black text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading ? 'Loading...' : 'Preview Companies'}
+          </button>
+        </div>
+      )}
 
       <SaveModal
         isOpen={showSaveModal}

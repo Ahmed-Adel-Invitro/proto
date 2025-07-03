@@ -34,6 +34,12 @@ export const StageNavigation: React.FC<StageNavigationProps> = ({
     'contact-columns': 'Contact Details'
   };
 
+  const stageDescriptions = {
+    'icp': 'Set your ideal customer profile and query companies',
+    'industry-columns': 'Select industry-specific data columns to display',
+    'contact-columns': 'Choose contact information columns to include'
+  };
+
   return (
     <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
       <div className="flex items-center space-x-4">
@@ -69,8 +75,13 @@ export const StageNavigation: React.FC<StageNavigationProps> = ({
           ))}
         </div>
 
-        <div className="text-sm text-gray-600">
-          {stageLabels[currentStage]}
+        <div className="text-center">
+          <div className="text-sm font-medium text-gray-900">
+            {stageLabels[currentStage]}
+          </div>
+          <div className="text-xs text-gray-500">
+            {stageDescriptions[currentStage]}
+          </div>
         </div>
 
         <button
@@ -78,7 +89,7 @@ export const StageNavigation: React.FC<StageNavigationProps> = ({
           disabled={currentIndex === stages.length - 1 || !canProceed}
           className="flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Next
+          {currentStage === 'icp' ? 'Query & Continue' : 'Next'}
           <ArrowRight className="h-4 w-4 ml-1" />
         </button>
       </div>

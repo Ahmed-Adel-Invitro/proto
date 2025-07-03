@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CompanyData, ColumnConfig, FeedbackData } from '../types';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Eye, EyeOff } from 'lucide-react';
 import { FeedbackModal } from './FeedbackModal';
 
 interface ResultsPanelProps {
@@ -31,6 +31,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
   });
 
   const selectedColumns = columns.filter(col => col.selected);
+  const hasData = data.length > 0;
   
   const getCellValue = (item: CompanyData, columnId: string) => {
     const value = item[columnId as keyof CompanyData];
@@ -107,6 +108,34 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
     </div>
   );
 
+  const DataLoadingState = () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center max-w-lg mx-auto p-8">
+        <div className="bg-blue-50 rounded-lg p-8 mb-6">
+          <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Querying Companies</h3>
+          <p className="text-sm text-gray-600">
+            Finding companies that match your ICP criteria...
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ColumnSelectionHint = () => (
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+      <div className="flex items-center">
+        <Eye className="h-5 w-5 text-blue-600 mr-2" />
+        <div>
+          <h4 className="text-sm font-medium text-blue-900">Customize Your View</h4>
+          <p className="text-sm text-blue-700 mt-1">
+            Use the filters on the left to select which columns you want to see in your results.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex-1 bg-gray-50 p-6 min-w-0">
       <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
@@ -116,7 +145,8 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
               <h2 className="text-lg font-medium text-gray-900">Query Results</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {showEmptyState ? 'Configure your filters and preview companies' : 
-                 isLoading ? 'Loading...' : `${data.length} matching companies`}
+                 isLoading ? 'Loading...' : 
+                 hasData ? `${data.length} matching companies` : 'Ready to customize columns'}
               </p>
             </div>
             <div className="flex space-x-3">
@@ -128,7 +158,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
               </button>
               <button
                 onClick={onSaveList}
-                disabled={isLoading || data.length === 0 || showEmptyState}
+                disabled={isLoading || !hasData || showEmptyState}
                 className="px-4 py-2 bg-black text-white rounded-md text-sm font-medium hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 Save List
@@ -140,28 +170,34 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
         <div className="flex-1 overflow-auto">
           {showEmptyState ? (
             <EmptyState />
-          ) : (
-            <table className="min-w-full">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  {selectedColumns.map((column, index) => (
-                    <th
-                      key={column.id}
-                      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${getCategoryBorder(column, index)}`}
-                    >
-                      {column.label}
+          ) : isLoading ? (
+            <DataLoadingState />
+          ) : hasData ? (
+            <>
+              {selectedColumns.length > 3 && <ColumnSelectionHint />}
+              <table className="min-w-full">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    {selectedColumns.map((column, index) => (
+                      <th
+                        key={column.id}
+                        className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${getCategoryBorder(column, index)}`}
+                      >
+                        <div className="flex items-center">
+                          {column.label}
+                          {column.selected && (
+                            <Eye className="h-3 w-3 ml-1 text-green-500" />
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Feedback
                     </th>
-                  ))}
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Feedback
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {isLoading ? (
-                  Array(10).fill(0).map((_, index) => <SkeletonRow key={index} />)
-                ) : (
-                  data.map((item) => (
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {data.map((item) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       {selectedColumns.map((column, index) => (
                         <td
@@ -190,10 +226,21 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-lg mx-auto p-8">
+                <div className="bg-gray-100 rounded-lg p-8">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Results</h3>
+                  <p className="text-sm text-gray-600">
+                    No companies match your current filter criteria. Try adjusting your filters.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
