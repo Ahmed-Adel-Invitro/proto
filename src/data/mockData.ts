@@ -414,3 +414,111 @@ export const filterOptions = {
     'Product Management'
   ]
 };
+
+// Dynamic industry-specific options based on selected industry
+export const getIndustrySpecificOptions = (industry: string): string[] => {
+  const industryOptionsMap: { [key: string]: string[] } = {
+    'Health Care': [
+      'Beds Number',
+      'License Type',
+      'License Expiry Date',
+      'Medical Equipment',
+      'Specializations',
+      'Accreditation Status',
+      'Patient Capacity',
+      'Emergency Services'
+    ],
+    'Software Development': [
+      'Tech Stack',
+      'Programming Languages',
+      'Development Methodologies',
+      'Cloud Platforms',
+      'Frameworks',
+      'Database Technologies',
+      'DevOps Tools',
+      'API Integrations'
+    ],
+    'Financial Technology': [
+      'Regulatory Compliance',
+      'Payment Methods',
+      'Security Certifications',
+      'Trading Platforms',
+      'Risk Management Tools',
+      'Blockchain Technology',
+      'Mobile Banking Features',
+      'Investment Products'
+    ],
+    'Education Technology': [
+      'Learning Management Systems',
+      'Student Information Systems',
+      'Assessment Tools',
+      'Content Management',
+      'Video Conferencing',
+      'Mobile Learning Apps',
+      'Analytics Platforms',
+      'Accessibility Features'
+    ],
+    'Retail Technology': [
+      'Point of Sale Systems',
+      'Inventory Management',
+      'E-commerce Platforms',
+      'Customer Relationship Management',
+      'Supply Chain Management',
+      'Payment Processing',
+      'Analytics Tools',
+      'Mobile Commerce'
+    ],
+    'Cloud Computing': [
+      'Cloud Platforms',
+      'Infrastructure Services',
+      'Security Features',
+      'Scalability Options',
+      'Data Storage Solutions',
+      'Backup Services',
+      'Monitoring Tools',
+      'API Management'
+    ],
+    'Cybersecurity': [
+      'Security Frameworks',
+      'Threat Detection',
+      'Incident Response',
+      'Compliance Standards',
+      'Encryption Methods',
+      'Identity Management',
+      'Vulnerability Assessment',
+      'Security Training'
+    ],
+    'Data Analytics': [
+      'Analytics Platforms',
+      'Data Visualization',
+      'Machine Learning',
+      'Business Intelligence',
+      'Data Integration',
+      'Real-time Processing',
+      'Predictive Analytics',
+      'Data Governance'
+    ],
+    'Renewable Energy': [
+      'Energy Sources',
+      'Storage Solutions',
+      'Grid Integration',
+      'Efficiency Metrics',
+      'Environmental Impact',
+      'Regulatory Compliance',
+      'Technology Partnerships',
+      'Sustainability Certifications'
+    ],
+    'Supply Chain Technology': [
+      'Logistics Management',
+      'Warehouse Management',
+      'Transportation Management',
+      'Supplier Management',
+      'Demand Planning',
+      'Inventory Optimization',
+      'Track and Trace',
+      'Supply Chain Visibility'
+    ]
+  };
+
+  return industryOptionsMap[industry] || [];
+};
