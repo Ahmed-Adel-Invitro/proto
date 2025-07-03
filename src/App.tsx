@@ -198,8 +198,8 @@ function App() {
         showEmptyState={shouldShowEmptyState()}
       />
 
-      {/* Preview button - only show for single flow or ICP stage in multi-stage */}
-      {(currentFlow === 'single' || (currentFlow === 'three-stage' && currentStage === 'icp')) && (
+      {/* Preview button - only show for single flow */}
+      {currentFlow === 'single' && (
         <div className="fixed bottom-6 left-6">
           <button
             onClick={() => simulateDataFetch()}

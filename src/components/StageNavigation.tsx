@@ -89,7 +89,7 @@ export const StageNavigation: React.FC<StageNavigationProps> = ({
           disabled={currentIndex === stages.length - 1 || !canProceed}
           className="flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {currentStage === 'icp' ? 'Query & Continue' : 'Next'}
+          {currentStage === 'icp' ? 'Find and Continue' : 'Next'}
           <ArrowRight className="h-4 w-4 ml-1" />
         </button>
       </div>
