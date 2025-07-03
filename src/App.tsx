@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { FlowType, StageType, FilterCriteria, ColumnConfig, CompanyData } from './types';
+import { FilterCriteria, ColumnConfig, CompanyData } from './types';
 import { mockCompanies, availableColumns } from './data/mockData';
-import { FilterPanel } from './components/FilterPanel';
-import { ResultsPanel } from './components/ResultsPanel';
-import { FlowToggle } from './components/FlowToggle';
-import { StageNavigation } from './components/StageNavigation';
+import { SmartFilterWizard } from './components/SmartFilterWizard';
+import { IntelligentResultsView } from './components/IntelligentResultsView';
+import { FloatingActionPanel } from './components/FloatingActionPanel';
+import { ProgressIndicator } from './components/ProgressIndicator';
+import { InsightsSidebar } from './components/InsightsSidebar';
 import { SaveModal } from './components/SaveModal';
 
 function App() {
-  const [currentFlow, setCurrentFlow] = useState<FlowType>('single');
-  const [currentStage, setCurrentStage] = useState<StageType>('icp');
+  const [currentStep, setCurrentStep] = useState(0);
   const [filters, setFilters] = useState<FilterCriteria>({
     industry: [],
     cities: [],
@@ -18,25 +18,29 @@ function App() {
     contacts: []
   });
   const [columns, setColumns] = useState<ColumnConfig[]>(availableColumns);
-  const [previewData, setPreviewData] = useState<CompanyData[]>([]);
+  const [data, setData] = useState<CompanyData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalType, setSaveModalType] = useState<'list' | 'filter'>('list');
-  const [hasPreviewedOnce, setHasPreviewedOnce] = useState(false);
-  const [hasQueriedInMultiStage, setHasQueriedInMultiStage] = useState(false);
+  const [insights, setInsights] = useState({
+    totalCompanies: 0,
+    topIndustries: [] as string[],
+    averageCompanySize: '',
+    geographicSpread: 0
+  });
+
+  const steps = [
+    { id: 'target', title: 'Define Target', description: 'Who are you looking for?' },
+    { id: 'discover', title: 'Discover Data', description: 'What data matters most?' },
+    { id: 'refine', title: 'Refine Results', description: 'Perfect your selection' },
+    { id: 'export', title: 'Export & Save', description: 'Get your data ready' }
+  ];
 
   const simulateDataFetch = async () => {
     setIsLoading(true);
-    setHasPreviewedOnce(true);
+    await new Promise(resolve => setTimeout(resolve, 1200));
     
-    // For multi-stage flow, mark that we've queried
-    if (currentFlow === 'three-stage') {
-      setHasQueriedInMultiStage(true);
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    let filteredData = mockCompanies.slice(0, 10); // Always show exactly 10 records
+    let filteredData = mockCompanies;
     
     if (filters.industry.length > 0) {
       filteredData = filteredData.filter(company => 
@@ -50,19 +54,22 @@ function App() {
       );
     }
     
-    // Ensure we always have 10 records for demo purposes
-    if (filteredData.length < 10) {
-      const additionalRecords = mockCompanies.slice(filteredData.length, 10);
-      filteredData = [...filteredData, ...additionalRecords];
-    }
+    setData(filteredData);
     
-    setPreviewData(filteredData.slice(0, 10));
+    // Generate insights
+    const industries = [...new Set(filteredData.map(c => c.industry))];
+    setInsights({
+      totalCompanies: filteredData.length,
+      topIndustries: industries.slice(0, 3),
+      averageCompanySize: '150-300 employees',
+      geographicSpread: [...new Set(filteredData.map(c => c.city))].length
+    });
+    
     setIsLoading(false);
   };
 
   const updateColumnsBasedOnFilters = () => {
     const updatedColumns = columns.map(col => {
-      // Handle industry-specific columns
       if (col.category === 'industry') {
         const shouldSelect = filters.industrySpecific.some(filter => 
           col.label.toLowerCase().includes(filter.toLowerCase()) ||
@@ -71,7 +78,6 @@ function App() {
         return { ...col, selected: shouldSelect };
       }
       
-      // Handle contact columns - map contact functions to specific contact columns
       if (col.category === 'contact') {
         const contactMapping: { [key: string]: string } = {
           'Marketing': 'marketingContacts',
@@ -95,126 +101,120 @@ function App() {
     setColumns(updatedColumns);
   };
 
-  const canProceed = () => {
-    switch (currentStage) {
-      case 'icp':
+  const canProceedToNextStep = () => {
+    switch (currentStep) {
+      case 0: // Target definition
         return filters.industry.length > 0 && filters.cities.length > 0;
-      case 'industry-columns':
-        return filters.industrySpecific.length > 0;
-      case 'contact-columns':
-        return filters.contacts.length > 0;
+      case 1: // Data discovery
+        return filters.industrySpecific.length > 0 || filters.contacts.length > 0;
+      case 2: // Refine results
+        return data.length > 0;
       default:
         return true;
     }
   };
 
-  const handleSaveList = () => {
-    setSaveModalType('list');
-    setShowSaveModal(true);
-  };
-
-  const handleSaveFilterGroup = () => {
-    setSaveModalType('filter');
-    setShowSaveModal(true);
-  };
-
-  const resetFlow = () => {
-    setCurrentStage('icp');
-    setFilters({
-      industry: [],
-      cities: [],
-      locationRange: '+ 50 Miles',
-      industrySpecific: [],
-      contacts: []
-    });
-    setColumns(availableColumns);
-    setPreviewData([]);
-    setHasPreviewedOnce(false);
-    setHasQueriedInMultiStage(false);
-  };
-
-  const handleStageChange = (newStage: StageType) => {
-    // If moving from ICP stage to industry-columns and we have data, auto-query
-    if (currentStage === 'icp' && newStage === 'industry-columns' && canProceed() && !hasQueriedInMultiStage) {
-      setCurrentStage(newStage);
+  const handleNextStep = () => {
+    if (currentStep === 0 && canProceedToNextStep()) {
       simulateDataFetch();
-    } else {
-      setCurrentStage(newStage);
+    }
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
-  useEffect(() => {
-    resetFlow();
-  }, [currentFlow]);
+  const handlePreviousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
   useEffect(() => {
     updateColumnsBasedOnFilters();
   }, [filters.industrySpecific, filters.contacts]);
 
-  // Show data in multi-stage flow once we have it
-  const shouldShowData = () => {
-    if (currentFlow === 'single') {
-      return hasPreviewedOnce;
-    } else {
-      // For three-stage flow, show data from industry-columns stage onwards if we've queried
-      return hasQueriedInMultiStage && (currentStage === 'industry-columns' || currentStage === 'contact-columns');
-    }
-  };
-
-  const shouldShowEmptyState = () => {
-    if (currentFlow === 'single') {
-      return !hasPreviewedOnce;
-    } else {
-      // For three-stage flow, show empty state only on ICP stage or if we haven't queried yet
-      return currentStage === 'icp' || !hasQueriedInMultiStage;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <FlowToggle currentFlow={currentFlow} onFlowChange={setCurrentFlow} />
-      
-      {currentFlow === 'three-stage' && (
-        <StageNavigation
-          currentStage={currentStage}
-          onStageChange={handleStageChange}
-          canProceed={canProceed()}
-        />
-      )}
-
-      <FilterPanel
-        filters={filters}
-        onFiltersChange={setFilters}
-        currentFlow={currentFlow}
-        currentStage={currentStage}
-      />
-      
-      <ResultsPanel
-        data={shouldShowData() ? previewData : []}
-        columns={columns}
-        isLoading={isLoading}
-        onSaveList={handleSaveList}
-        onSaveFilterGroup={handleSaveFilterGroup}
-        showEmptyState={shouldShowEmptyState()}
-      />
-
-      {/* Preview button - only show for single flow */}
-      {currentFlow === 'single' && (
-        <div className="fixed bottom-6 left-6">
-          <button
-            onClick={() => simulateDataFetch()}
-            disabled={isLoading || !canProceed()}
-            className="w-80 bg-black text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {isLoading ? 'Loading...' : 'Preview Companies'}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Smart CRM Discovery</h1>
+              <p className="text-sm text-gray-600 mt-1">AI-powered company research and data collection</p>
+            </div>
+            <ProgressIndicator 
+              steps={steps} 
+              currentStep={currentStep} 
+              onStepClick={setCurrentStep}
+            />
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-12 gap-8">
+          {/* Main Content Area */}
+          <div className="col-span-8">
+            {currentStep === 0 && (
+              <SmartFilterWizard
+                filters={filters}
+                onFiltersChange={setFilters}
+                onNext={handleNextStep}
+                canProceed={canProceedToNextStep()}
+              />
+            )}
+            
+            {currentStep >= 1 && (
+              <IntelligentResultsView
+                data={data}
+                columns={columns}
+                onColumnsChange={setColumns}
+                filters={filters}
+                onFiltersChange={setFilters}
+                isLoading={isLoading}
+                currentStep={currentStep}
+                insights={insights}
+              />
+            )}
+          </div>
+
+          {/* Insights Sidebar */}
+          <div className="col-span-4">
+            <InsightsSidebar
+              insights={insights}
+              filters={filters}
+              dataCount={data.length}
+              currentStep={currentStep}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Action Panel */}
+      <FloatingActionPanel
+        currentStep={currentStep}
+        canProceed={canProceedToNextStep()}
+        onNext={handleNextStep}
+        onPrevious={handlePreviousStep}
+        onSaveList={() => {
+          setSaveModalType('list');
+          setShowSaveModal(true);
+        }}
+        onSaveFilter={() => {
+          setSaveModalType('filter');
+          setShowSaveModal(true);
+        }}
+        dataCount={data.length}
+        isLoading={isLoading}
+      />
 
       <SaveModal
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        recordCount={previewData.length}
+        recordCount={data.length}
         type={saveModalType}
       />
     </div>
