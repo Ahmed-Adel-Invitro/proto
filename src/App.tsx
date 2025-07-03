@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FilterCriteria, ColumnConfig, CompanyData } from './types';
 import { mockCompanies, availableColumns } from './data/mockData';
-import { SmartFilterWizard } from './components/SmartFilterWizard';
-import { IntelligentResultsView } from './components/IntelligentResultsView';
-import { FloatingActionPanel } from './components/FloatingActionPanel';
+import { MultiStepFlow } from './components/MultiStepFlow';
 import { SaveModal } from './components/SaveModal';
 
 function App() {
@@ -110,43 +108,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Company Discovery</h1>
-          <p className="text-gray-600 mt-2">Find and filter companies that match your criteria</p>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-12 gap-8">
-          {/* Filters Sidebar */}
-          <div className="col-span-4">
-            <SmartFilterWizard
-              filters={filters}
-              onFiltersChange={setFilters}
-              columns={columns}
-              onColumnsChange={setColumns}
-              currentStep={currentStep}
-            />
-          </div>
-
-          {/* Results Area */}
-          <div className="col-span-8">
-            <IntelligentResultsView
-              data={data}
-              columns={columns}
-              isLoading={isLoading}
-              currentStep={currentStep}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Action Panel */}
-      <FloatingActionPanel
+      <MultiStepFlow
         currentStep={currentStep}
+        filters={filters}
+        onFiltersChange={setFilters}
+        columns={columns}
+        onColumnsChange={setColumns}
+        data={data}
+        isLoading={isLoading}
         canProceed={canProceedToNextStep()}
         onNext={handleNextStep}
         onPrevious={handlePreviousStep}
@@ -158,8 +127,6 @@ function App() {
           setSaveModalType('filter');
           setShowSaveModal(true);
         }}
-        dataCount={data.length}
-        isLoading={isLoading}
       />
 
       <SaveModal
